@@ -1,5 +1,10 @@
 ﻿using namespace System.Drawing
 
+Function Get-WallpaperPath
+{
+    Get-ItemProperty 'HKCU:\Control Panel\Desktop' | Select-Object -ExpandProperty WallPaper
+}
+
 
 Function Get-WallpaperFileExt
 {
@@ -24,17 +29,20 @@ function Get-PSBGInfoBackgroundImage
     [OutputType([image])]
     Param
     (
-        
+        [Parameter(Mandatory=$true,
+                   ValueFromPipeline=$true,
+                   Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string]$BaseImage
     )
 
     Begin
     {
-        [bool]$PSBGInfoImage = $fale
+        [bool]$PSBGInfoImage = $false
     }
     Process
     {
-        Try { 
-            $BaseImage = Get-ItemProperty 'HKCU:\Control Panel\Desktop' | Select-Object -ExpandProperty WallPaper
+        Try {
             $Image = [Image]::FromFile($baseimage)
             IF ((Get-Item $BaseImage | Select-Object -ExpandProperty Name) -like "PSBGImage*") {
                 $PSBGInfoImage = $true
@@ -59,7 +67,29 @@ function Get-PSBGInfoBackgroundImage
 
 Function New-PSBGInfoImageFiles
 {
+    [CmdletBinding()]
+    [OutputType([void])]
+    Param
+    (
+    )
+    
+    begin
+    {
+    }
+    
+    process
+    { 
+        [String]$BaseImage = Get-WallpaperPath
+        [string]$PSBGInfoWallpaperOrig = "$env:TEMP\PSBGImage.orig.$(Get-WallpaperFileExt)"
+        [string]$PSBGInfoWallpaper = "$env:TEMP\PSBGImage$(Get-WallpaperFileExt)"
 
+        Copy-Item -Path $BaseImage -Destination $PSBGInfoWallpaperOrig -ErrorAction SilentlyContinue
+        Copy-Item -Path $BaseImage -Destination $PSBGInfoWallpaper -ErrorAction SilentlyContinue
+    }
+
+    end
+    {
+    }
 }
 
 <#
@@ -80,13 +110,12 @@ function Update-PSBGInfoBackgroundImage
     (
         # Original wallpaper
         [Parameter(Mandatory=$true,
-                   ValueFromPipelineByPropertyName=$true,
+                   ValueFromPipeline=$true,
                    Position=0)]
         [Image]$Image,
 
         # String[] to add to desktop wallpaper.
         [Parameter(Mandatory=$true,
-                   ValueFromPipelineByPropertyName=$true,
                    Position=1)]
         [string[]]$text,
         
